@@ -19,6 +19,24 @@ In this lab, your team loads the incident tracker with tens of thousands of synt
 - Week 8 complete: application has data in the database
 - k6 installed from Week 5
 
+## Pulling This Week's Starter Content Into Your Team Repo
+
+This repo (`inet4031-week09`) is instructor-provided starter/reference content for
+Week 9, not something you clone standalone. Pull the pieces you need into your
+team's single repo:
+
+```bash
+git remote add week9 https://github.com/INET4031-Labs/inet4031-week09.git
+git fetch week9
+git checkout week9/main -- ramped-test.js runbook.md smoke-test.js scripts docs
+mkdir -p week-9
+mv ramped-test.js runbook.md smoke-test.js week-9/
+git remote remove week9
+```
+
+Do this before you start editing `week-9/` locally, or your local changes will be
+silently overwritten by the checkout.
+
 ## Architecture Notice
 
 This lab assumes the university container platform permits `--privileged` mode. This has not been confirmed by the professor. If unavailable, the container-per-team model fails and the course must fall back to individual student VMs.
