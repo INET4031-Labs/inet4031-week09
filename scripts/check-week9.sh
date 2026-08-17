@@ -157,7 +157,7 @@ echo ""
 echo "Check 8: Role Artifact Files"
 echo "---"
 ARTIFACTS_OK=true
-for file in docs/sprint-5-retrospective.md docs/environment-log.md docs/acceptance-criteria.md docs/qa-report-5.md; do
+for file in docs/sprint-5-retrospective.md docs/week-09-environment-log.md docs/week-09-acceptance-criteria.md docs/qa-report-5.md; do
   if [ -f "$file" ]; then
     check_pass "$file exists"
   else

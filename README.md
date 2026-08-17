@@ -65,8 +65,8 @@ week-09/
 ├── runbook.md                         (performance troubleshooting guide)
 └── docs/
     ├── sprint-5-retrospective.md      (SM artifact - blank template)
-    ├── environment-log.md             (SA artifact - blank template)
-    ├── acceptance-criteria.md         (QA artifact - blank template)
+    ├── week-09-environment-log.md             (SA artifact - blank template)
+    ├── week-09-acceptance-criteria.md         (QA artifact - blank template)
     └── qa-report-5.md                 (QA artifact - blank template)
 ```
 
