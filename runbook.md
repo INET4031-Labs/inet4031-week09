@@ -22,11 +22,11 @@ Flask Deployment CPU limit set to 100m. At 50 VUs, the container requests more C
    kubectl get deployment flask -o yaml | grep -A5 resources
    ```
 
-3. Update the CPU limit in `manifests/flask-deployment.yaml` from 100m to 500m.
+3. Confirm/set the CPU limit to 500m in `infrastructure/flask.tf` (`kubernetes_deployment.flask` resource).
 
 4. Apply the updated deployment:
    ```bash
-   kubectl apply -f manifests/flask-deployment.yaml
+   cd infrastructure && tofu plan && tofu apply
    ```
 
 5. Re-run the ramped load test and confirm the throttle rate drops to near zero.

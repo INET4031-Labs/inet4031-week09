@@ -101,7 +101,7 @@ TODO: Paste full output from check script
 | Smoke test | `week-9/smoke-test.js` | TODO (present/missing) | TODO |
 | Ramped test | `week-9/ramped-test.js` | TODO (present/missing) | TODO |
 | Runbook | `week-9/runbook.md` | TODO (present/missing) | TODO |
-| Flask deployment updated | `manifests/flask-deployment.yaml` | TODO (updated/not updated) | TODO |
+| Flask deployment updated | `infrastructure/flask.tf` | TODO (updated/not updated) | TODO |
 | CI gate added | `.github/workflows/ci.yml` | TODO (added/not added) | TODO |
 | Check script | `scripts/check-week9.sh` | TODO (present/missing) | TODO |
 
