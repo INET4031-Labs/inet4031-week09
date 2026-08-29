@@ -57,11 +57,11 @@ This lab assumes the university container platform permits `--privileged` mode. 
 - `week-9/smoke-test.js` - Baseline load test script
 - `week-9/ramped-test.js` - Ramped load test script
 - `week-9/runbook.md` - Performance troubleshooting runbook
-- `manifests/flask-deployment.yaml` - Updated with corrected CPU limit
-- `.github/workflows/ci.yml` - Updated with k6 threshold gate
+- `infrastructure/flask.tf` - Confirmed/updated with corrected CPU limit (applied via `tofu apply`, not `kubectl apply`)
+- `.github/workflows/ci.yml` - Updated with k6 threshold gate that stands up the Week 2 stack before running k6
 - `./scripts/check-week9.sh` - Validation check script
 - Google Doc - Updated with baseline vs post-fix comparison numbers
-- Role-artifact documents - Retrospective, environment log, acceptance criteria, QA report
+- Role-artifact documents - Sprint retrospective and QA report
 
 ## Key Concepts
 
@@ -83,8 +83,6 @@ week-09/
 ├── runbook.md                         (performance troubleshooting guide)
 └── docs/
     ├── sprint-5-retrospective.md      (SM artifact - blank template)
-    ├── week-09-environment-log.md             (SA artifact - blank template)
-    ├── week-09-acceptance-criteria.md         (QA artifact - blank template)
     └── qa-report-5.md                 (QA artifact - blank template)
 ```
 
@@ -110,8 +108,8 @@ week-09/
 - Monitor and report any environment issues during tests
 
 **Quality Assurance**
-- Write acceptance criteria before Developers implement
-- Run all validation checks
+- Run all validation checks, including the `tofu plan` drift check
+- Verify the k6 threshold gate passes in CI
 - Sign off before deliverables are submitted
 - Write QA report with check script results
 

@@ -122,19 +122,21 @@ else
 fi
 echo ""
 
-# Check 6: Verify manifests/flask-deployment.yaml exists
-echo "Check 6: Flask Deployment Manifest"
+# Check 6: Verify infrastructure/flask.tf has the corrected CPU limit
+# NOTE: The Flask Deployment is owned by OpenTofu (infrastructure/flask.tf) since Week 4.
+# manifests/flask-deployment.yaml is no longer applied, so it is not checked here.
+echo "Check 6: Flask Deployment CPU Limit (infrastructure/flask.tf)"
 echo "---"
-if [ -f "manifests/flask-deployment.yaml" ]; then
-  check_pass "manifests/flask-deployment.yaml exists"
+if [ -f "infrastructure/flask.tf" ]; then
+  check_pass "infrastructure/flask.tf exists"
   # Check if CPU limit is set to 500m (or higher)
-  if grep -q "cpu:.*500m\|cpu:.*600m\|cpu:.*1\|cpu:.*\"1\"" manifests/flask-deployment.yaml; then
+  if grep -q "cpu.*=.*\"500m\"\|cpu.*=.*\"600m\"\|cpu.*=.*\"1\"" infrastructure/flask.tf; then
     check_pass "CPU limit appears to be updated (500m or higher)"
   else
-    check_warn "CPU limit not clearly updated to 500m+ in manifest"
+    check_warn "CPU limit not clearly updated to 500m+ in infrastructure/flask.tf"
   fi
 else
-  check_fail "manifests/flask-deployment.yaml not found"
+  check_fail "infrastructure/flask.tf not found"
 fi
 echo ""
 
@@ -157,7 +159,7 @@ echo ""
 echo "Check 8: Role Artifact Files"
 echo "---"
 ARTIFACTS_OK=true
-for file in docs/sprint-5-retrospective.md docs/week-09-environment-log.md docs/week-09-acceptance-criteria.md docs/qa-report-5.md; do
+for file in docs/sprint-5-retrospective.md docs/qa-report-5.md; do
   if [ -f "$file" ]; then
     check_pass "$file exists"
   else
@@ -165,6 +167,21 @@ for file in docs/sprint-5-retrospective.md docs/week-09-environment-log.md docs/
     ARTIFACTS_OK=false
   fi
 done
+echo ""
+
+# Check 9: OpenTofu State Matches the Cluster (No Drift)
+echo "Check 9: OpenTofu Drift (infrastructure/flask.tf vs. live cluster)"
+echo "---"
+if command -v tofu &> /dev/null && [ -d "infrastructure" ]; then
+  TOFU_PLAN_OUTPUT=$(cd infrastructure && tofu plan -no-color 2>&1)
+  if echo "$TOFU_PLAN_OUTPUT" | grep -q "No changes"; then
+    check_pass "tofu plan reports no changes (infrastructure/flask.tf matches the cluster)"
+  else
+    check_fail "tofu plan detected drift -- infrastructure/flask.tf does not match the live cluster (likely a kubectl apply that bypassed OpenTofu)"
+  fi
+else
+  check_fail "tofu is not installed, not on PATH, or infrastructure/ does not exist"
+fi
 echo ""
 
 # Summary
