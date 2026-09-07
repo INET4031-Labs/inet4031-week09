@@ -1,8 +1,32 @@
 # Sprint 5 Retrospective
 
-**Sprint:** 5 (Weeks 9-10)
-**Date:** TODO
-**Scrum Master:** TODO
+**Owned by:** Scrum Master
+
+This file is completed at the end of Week 9, before your team begins its challenge track. Review what your team shipped, what went well, what went poorly, and one specific process change for Sprint 6.
+
+## What Went Well
+
+TODO: What did your team do well this sprint? What accomplishment are you proud of?
+
+## What Could Be Better
+
+TODO: What was difficult? What slowed you down? What surprised you?
+
+## What We'll Do Differently Next Sprint
+
+TODO: Based on what you learned, name one specific process change or workflow improvement you will try in Sprint 6.
+
+## Team Contributions
+
+Use this section to note which team members led which parts of the work:
+
+| Role | Name | Primary Contribution |
+|---|---|---|
+| Scrum Master | | |
+| System Admin | | |
+| QA | | |
+| Developer 1 | | |
+| Developer 2+ | | |
 
 ## Sprint Goals
 
@@ -13,35 +37,15 @@
 - Fix both issues and measure improvement
 - Add k6 threshold gate to GitHub Actions CI
 
-## What Went Well
-
-TODO: List 2-3 things the team did well this sprint. Examples: clear communication, quick debugging, good documentation.
-
-## What Could Improve
-
-TODO: List 2-3 things that were difficult or took longer than expected. Examples: environment setup issues, unclear steps in the lab, debugging performance.
-
-## Process Change for Next Sprint
-
-TODO: Describe one specific change the team will make in Sprint 6 based on what you learned in Sprint 5.
-
-## Blockers Encountered and Resolved
-
-TODO: List any technical or process blockers. How did the team resolve them? Did they require help from a TA?
-
 ## Metrics Achieved
 
-- TODO: Database rows seeded: ___
-- TODO: Baseline P95 response time: ___ms
-- TODO: Post-fix P95 response time: ___ms
-- TODO: CPU throttle rate before fix: ___
-- TODO: CPU throttle rate after fix: ___
-- TODO: k6 threshold gate: passes CI
+- Database rows seeded: ___
+- Baseline P95 response time: ___ms
+- Post-fix P95 response time: ___ms
+- CPU throttle rate before fix: ___
+- CPU throttle rate after fix: ___
+- k6 threshold gate: passes CI
 
-## Team Communication During Sprint
+## Notes
 
-TODO: How often did the team check in? Did async communication work well? Any scheduling conflicts?
-
-## Decisions Made This Sprint
-
-TODO: List major technical or team decisions made (e.g., which field to index, CPU limit value chosen, CI threshold tuning).
+Any additional context about the sprint that does not fit the structure above.
