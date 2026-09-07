@@ -1,14 +1,13 @@
 # QA Report: Sprint 5 Week 9
 
-**Owned by:** QA
+QA is responsible for running all validation checks and signing off before deliverables are submitted. This report documents the validation process.
 
-This report documents the results of validation testing at the end of the week. It includes check script results, acceptance criteria verification, and any rework required before marking deliverables complete.
-
-This file is completed after the database is seeded, both incidents (CPU throttling and the missing index) are diagnosed and fixed, the k6 threshold gate is added to CI, and `week-9/runbook.md` is filled in with measured before/after values.
+**QA Team Member:** [Name]
+**Date Completed:** [Date]
 
 ---
 
-## Validation Check Results
+## Validation Checks
 
 ### Check 1: Seeded Row Count Is Approximately 50,000
 
@@ -183,28 +182,22 @@ TODO: [ ] Week 9 storage check recorded
 
 ---
 
-## Rework Required
+## Summary
 
-If any validation checks or acceptance criteria failed, document the rework needed:
+**Overall Status:** [ ] ALL CHECKS PASS [ ] SOME CHECKS FAIL
 
-**Issues Found:**
-```
-TODO: List any failures here
-```
+**Blockers:** [List any blockers that prevent submission]
 
-**Rework Plan:**
-```
-TODO: For each failure, describe the steps to fix it and who will do the work
-```
+**Corrective Actions Taken:** [List any fixes applied during QA]
 
-**Re-validation Date:** TODO: When will rework be complete?
+**QA Sign-Off:**
+
+By signing below, QA certifies that all required validation checks have been executed and all deliverables meet the acceptance criteria.
+
+**QA Signature:** _________________    **Date:** __________
 
 ---
 
-## Sign-Off
+## Notes for Sprint 6
 
-**QA Name:** ______________________  
-**Date Signed:** ______________________  
-**Overall Status:** TODO: [ ] All Criteria Met [ ] Rework Required
-
-**Notes:** Any final observations about the sprint's technical quality and team coordination.
+[Any observations or recommendations for the next sprint]
