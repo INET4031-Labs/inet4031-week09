@@ -11,7 +11,7 @@ QA is responsible for running all validation checks and signing off before deliv
 
 ### Check 1: Seeded Row Count Is Approximately 50,000
 
-**Test:** Run `docker compose -f week-2/docker-compose.yml exec db psql -U appuser -d statustracker -c "SELECT COUNT(*) FROM incidents;"`
+**Test:** Run `kubectl exec deploy/db -- psql -U appuser -d statustracker -c "SELECT COUNT(*) FROM incidents;"`
 
 **Expected:** Approximately 50,000 rows
 
@@ -28,7 +28,7 @@ TODO: Paste the actual row count
 
 ### Check 2: Sequential Scan Is Fixed by the New Index
 
-**Test:** Run `docker compose -f week-2/docker-compose.yml exec db psql -U appuser -d statustracker -c "\di idx_incidents_status_created"`, then re-run `EXPLAIN (ANALYZE, BUFFERS)` on the status-filtered query from the runbook
+**Test:** Run `kubectl exec deploy/db -- psql -U appuser -d statustracker -c "\di idx_incidents_status_created"`, then re-run `EXPLAIN (ANALYZE, BUFFERS)` on the status-filtered query from the runbook
 
 **Expected:** Index listed by name; `EXPLAIN` output shows `Index Scan`, not `Seq Scan`
 
@@ -56,7 +56,7 @@ TODO: Paste the query result
 
 **Status:** TODO: [ ] Pass [ ] Fail
 
-**Notes:** Did the ramped load test that produced this reading actually target `http://localhost:8081/incidents` (the Kubernetes-fronted app)? Traffic sent to `:8080` only reaches the standalone Docker Compose stack and never touches the throttled pod -- that reads as a clean "no throttling" result regardless of what the CPU limit is set to. Also confirm the metric name used was `container_cpu_cfs_throttled_periods_total`, not `_seconds_total` -- the latter is cgroup v1-only and returns no data at all on cgroup v2 hosts (the default on modern Docker/k3d setups).
+**Notes:** Did the ramped load test that produced this reading actually target your team's Kubernetes port (`k6 run -e BASE_URL=http://localhost:<your Kubernetes port> ...`)? Without `-e BASE_URL`, the test defaults to `http://localhost:8080`, which never reaches the throttled pods -- that reads as a clean "no throttling" result regardless of what the CPU limit is set to. Also confirm the metric name used was `container_cpu_cfs_throttled_periods_total`, not `_seconds_total` -- the latter is cgroup v1-only and returns no data at all on cgroup v2 hosts (the default on modern Docker/k3d setups).
 
 ---
 
@@ -73,24 +73,24 @@ TODO: Paste the k6 summary output
 
 **Status:** TODO: [ ] Pass [ ] Fail
 
-**Notes:** Was this run against a live, healthy `week-2` Compose stack (`docker compose -f week-2/docker-compose.yml ps` all healthy)? A stack that isn't up yet fails every request instead of failing the threshold cleanly, and can be mistaken for a performance regression.
+**Notes:** Was this run against your healthy k3d application (`kubectl get pods` all `Running`), with `-e BASE_URL=http://localhost:<your Kubernetes port>`? An application that isn't up fails every request instead of failing the threshold cleanly, and can be mistaken for a performance regression.
 
 ---
 
-### Check 5: OpenTofu State Matches the Live Cluster
+### Check 5: CPU Limit Restored in the Cluster and in `flask.tf`
 
-**Test:** Run `cd infrastructure && tofu plan`
+**Test:** Run `kubectl get deployment flask -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}'` and `grep -n "cpu" infrastructure/flask.tf`
 
 **Expected:** `No changes. Your infrastructure matches the configuration.`
 
 **Actual Result:**
 ```
-TODO: Paste the tofu plan output
+TODO: Paste the output of both commands
 ```
 
 **Status:** TODO: [ ] Pass [ ] Fail
 
-**Notes:** If drift is reported on the Flask Deployment's `resources.limits.cpu`, was the fix applied by editing `infrastructure/flask.tf` and running `tofu apply` (Step 15), rather than left as the direct `kubectl apply` from Step 9?
+**Notes:** Both should show `500m`. If the live value is still `100m`, the Step 15 `kubectl set resources` fix was not applied. Do not run `tofu plan` on the shared VM -- the OpenTofu step is predict-only this week.
 
 ---
 
@@ -107,7 +107,7 @@ TODO: Paste the full output of the check script
 
 **Status:** TODO: [ ] Pass [ ] Fail
 
-**Notes:** The script's CPU-throttle check queries Prometheus directly and requires `kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090` (Step 0a) to still be running in the background.
+**Notes:** The script's CPU-throttle check queries Prometheus directly and requires the Step 0a port-forward (`kubectl port-forward -n monitoring service/prometheus-server <your Prometheus port>:80`) to still be running.
 
 ---
 
@@ -127,9 +127,9 @@ TODO: [ ] Baseline k6 run completed and screenshotted to the Google Doc
 
 ### Part 3: Ramped Load Test and USE Method Diagnosis
 
-TODO: [ ] Intentional 100m CPU limit applied to `flask` via direct `kubectl apply` (not OpenTofu), per Step 9
-TODO: [ ] `week-9/ramped-test.js` created and confirmed to target `http://localhost:8081/incidents`
-TODO: [ ] Ramped test run while watching the Grafana Flask USE Dashboard
+TODO: [ ] Intentional 100m CPU limit applied to `flask` with `kubectl set resources`, per Step 9
+TODO: [ ] `week-9/ramped-test.js` created and run with `-e BASE_URL=http://localhost:<your Kubernetes port>`
+TODO: [ ] Ramped test run while re-running the USE queries with `week-5/pq.sh`
 TODO: [ ] Non-zero CPU throttle rate captured and screenshotted before the fix
 TODO: [ ] `pg_stat_statements` enabled via `shared_preload_libraries` (Step 13a) before diagnosis
 TODO: [ ] `EXPLAIN (ANALYZE, BUFFERS)` captured showing `Seq Scan` before the index
@@ -139,7 +139,7 @@ TODO: [ ] `EXPLAIN (ANALYZE, BUFFERS)` captured showing `Seq Scan` before the in
 TODO: [ ] Index created with `CREATE INDEX CONCURRENTLY idx_incidents_status_created`
 TODO: [ ] `EXPLAIN (ANALYZE, BUFFERS)` re-run, confirms `Index Scan` replaces `Seq Scan`
 TODO: [ ] `infrastructure/flask.tf` CPU limit confirmed/restored to 500m
-TODO: [ ] `tofu plan`/`tofu apply` used to correct the Step 9 drift (not a manual `kubectl apply`)
+TODO: [ ] Live CPU limit restored to 500m with `kubectl set resources`, `infrastructure/flask.tf` confirmed at 500m, and the [PREDICT ONLY] prediction recorded (Step 15)
 TODO: [ ] Ramped test re-run; RPS, P50, P95, and error rate recorded and compared to baseline
 TODO: [ ] CPU throttle rate re-queried and confirmed near zero
 
@@ -158,7 +158,7 @@ TODO: [ ] All changes committed and pushed to `main`
 ### Required Files
 
 TODO: [ ] `week-9/smoke-test.js` is committed
-TODO: [ ] `week-9/ramped-test.js` is committed, confirmed targeting `:8081`
+TODO: [ ] `week-9/ramped-test.js` is committed and reads its target from `BASE_URL`
 TODO: [ ] `week-9/runbook.md` is committed using the two-incident format, with measured values filled in (not placeholders)
 TODO: [ ] `infrastructure/flask.tf` reflects the corrected 500m CPU limit
 TODO: [ ] `.github/workflows/ci.yml` includes the `load-test-gate` job
@@ -167,7 +167,7 @@ TODO: [ ] `scripts/check-week9.sh` present and runs clean
 ### GitHub Repository
 
 TODO: [ ] All changes are pushed to the main branch
-TODO: [ ] `tofu plan` shows no drift at the time of commit
+TODO: [ ] `manifests/db-deployment.yaml` committed with the `pg_stat_statements` startup flag
 
 ### Google Doc
 
