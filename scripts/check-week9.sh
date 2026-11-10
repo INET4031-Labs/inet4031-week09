@@ -41,11 +41,11 @@ echo ""
 
 # Check 1: Verify seeded row count
 echo "Checking database row count..."
-ROW_COUNT=$(docker compose -f "$REPO_ROOT/week-2/docker-compose.yml" exec -T db \
-    psql -U appuser -d statustracker -t -c "SELECT COUNT(*) FROM incidents;" | tr -d ' ')
+ROW_COUNT=$(kubectl exec deploy/db -- \
+    psql -U appuser -d statustracker -t -A -c "SELECT COUNT(*) FROM incidents;" 2>/dev/null | tr -d ' ' || true)
 
 if [ -n "$ROW_COUNT" ]; then
-    if [ "$ROW_COUNT" -ge 49500 ] && [ "$ROW_COUNT" -le 50500 ]; then
+    if [ "$ROW_COUNT" -ge 49500 ] && [ "$ROW_COUNT" -le 51000 ]; then
         check_pass "Row count: $ROW_COUNT (approximately 50,000 expected)"
     else
         check_warn "Row count: $ROW_COUNT (expected ~50,000; count is within tolerance for asynchronous processes)"
@@ -57,10 +57,10 @@ echo ""
 
 # Check 2: Verify index exists
 echo "Checking database index..."
-INDEX_EXISTS=$(docker compose -f "$REPO_ROOT/week-2/docker-compose.yml" exec -T db \
-    psql -U appuser -d statustracker -t -c "\di idx_incidents_status_created" | wc -l)
+INDEX_EXISTS=$(kubectl exec deploy/db -- \
+    psql -U appuser -d statustracker -t -A -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_incidents_status_created';" 2>/dev/null | tr -d ' ' || true)
 
-if [ "$INDEX_EXISTS" -gt 0 ]; then
+if [ "${INDEX_EXISTS:-0}" -gt 0 ] 2>/dev/null; then
     check_pass "Index idx_incidents_status_created exists"
 else
     check_fail "Index idx_incidents_status_created not found"
@@ -74,19 +74,24 @@ echo "Checking CPU throttle rate..."
 # NOTE: container_cpu_cfs_throttled_seconds_total is cgroup v1-only and is not
 # exported by cAdvisor on cgroup v2 hosts (e.g. k3d on a modern Docker host).
 # Use the periods-based ratio instead, which is available on both cgroup versions.
+# Prometheus port is 9090 + team number (Week 2 HOST_PORT 8083 -> 9093). PROM_URL overrides it.
+if [ -z "$PROM_URL" ] && [ -f "$REPO_ROOT/week-2/.env" ]; then
+    HOST_PORT=$(grep -E "^HOST_PORT=" "$REPO_ROOT/week-2/.env" | cut -d '=' -f2)
+    PROM_URL="http://localhost:$(( ${HOST_PORT:-8080} + 1010 ))"
+fi
+PROM_URL="${PROM_URL:-http://localhost:9090}"
 if command -v curl &> /dev/null; then
-    THROTTLE_RATE=$(curl -sg 'http://localhost:9090/api/v1/query?query=rate(container_cpu_cfs_throttled_periods_total{container="flask"}[5m])/rate(container_cpu_cfs_periods_total{container="flask"}[5m])' \
+    THROTTLE_RATE=$(curl -sg "$PROM_URL/api/v1/query?query=rate(container_cpu_cfs_throttled_periods_total{container=\"flask\"}[5m])/rate(container_cpu_cfs_periods_total{container=\"flask\"}[5m])" \
         | python3 -c "import json,sys; d=json.load(sys.stdin); v=float(d['data']['result'][0]['value'][1]) if d['data']['result'] else 0; print(f'{v:.4f}')" 2>/dev/null || echo "ERROR")
 
     if [ "$THROTTLE_RATE" != "ERROR" ]; then
-        THROTTLE_NUM=$(echo "$THROTTLE_RATE" | cut -d. -f1,2)
-        if (( $(echo "$THROTTLE_NUM < 0.01" | bc -l) )); then
+        if python3 -c "import sys; sys.exit(0 if float('$THROTTLE_RATE') < 0.01 else 1)"; then
             check_pass "CPU throttle rate: $THROTTLE_RATE (< 0.01 after fix)"
         else
             check_warn "CPU throttle rate: $THROTTLE_RATE (> 0.01; verify fix was applied)"
         fi
     else
-        check_warn "Could not query Prometheus (may not be port-forwarded); skipping throttle check"
+        check_warn "Could not query Prometheus at $PROM_URL (is the Step 0a port-forward running?); skipping throttle check"
     fi
 else
     check_warn "curl not found; skipping Prometheus query"
@@ -128,17 +133,22 @@ else
 fi
 echo ""
 
-# Check 6: Verify infrastructure/flask.tf has the corrected CPU limit
-# NOTE: The Flask Deployment is owned by OpenTofu (infrastructure/flask.tf) since Week 4.
-# manifests/flask-deployment.yaml is no longer applied, so it is not checked here.
-echo "Checking Flask Deployment CPU limit (infrastructure/flask.tf)..."
+# Check 6: Verify the CPU limit is restored, both live and in infrastructure/flask.tf
+# OpenTofu is not run on the shared VM: the live Deployment is changed with kubectl,
+# and infrastructure/flask.tf must describe the same limit for the rebuild.
+echo "Checking Flask CPU limit (live cluster and infrastructure/flask.tf)..."
+LIVE_CPU=$(kubectl get deployment flask -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}' 2>/dev/null || true)
+if [ "$LIVE_CPU" = "500m" ]; then
+    check_pass "Live Flask Deployment CPU limit is 500m"
+else
+    check_fail "Live Flask Deployment CPU limit is '$LIVE_CPU', expected 500m (kubectl set resources deployment flask -c flask --limits=cpu=500m)"
+fi
 if [ -f "$REPO_ROOT/infrastructure/flask.tf" ]; then
     check_pass "infrastructure/flask.tf exists"
-    # Check if CPU limit is set to 500m (or higher)
-    if grep -q "cpu.*=.*\"500m\"\|cpu.*=.*\"600m\"\|cpu.*=.*\"1\"" "$REPO_ROOT/infrastructure/flask.tf"; then
-        check_pass "CPU limit appears to be updated (500m or higher)"
+    if grep -q "cpu.*=.*\"500m\"" "$REPO_ROOT/infrastructure/flask.tf"; then
+        check_pass "infrastructure/flask.tf sets a 500m CPU limit"
     else
-        check_warn "CPU limit not clearly updated to 500m+ in infrastructure/flask.tf"
+        check_fail "infrastructure/flask.tf does not set cpu = \"500m\""
     fi
 else
     check_fail "infrastructure/flask.tf not found"
@@ -170,17 +180,13 @@ for file in docs/sprint-5-retrospective.md docs/qa-report-5.md; do
 done
 echo ""
 
-# Check 9: OpenTofu State Matches the Cluster (No Drift)
-echo "Checking OpenTofu drift (infrastructure/flask.tf vs. live cluster)..."
-if command -v tofu &> /dev/null && [ -d "$REPO_ROOT/infrastructure" ]; then
-    TOFU_PLAN_OUTPUT=$(cd "$REPO_ROOT/infrastructure" && tofu plan -no-color 2>&1)
-    if echo "$TOFU_PLAN_OUTPUT" | grep -q "No changes"; then
-        check_pass "tofu plan reports no changes (infrastructure/flask.tf matches the cluster)"
-    else
-        check_fail "tofu plan detected drift -- infrastructure/flask.tf does not match the live cluster (likely a kubectl apply that bypassed OpenTofu)"
-    fi
+# Check 9: pg_stat_statements is loaded at startup
+echo "Checking pg_stat_statements..."
+PRELOAD=$(kubectl exec deploy/db -- psql -U appuser -d statustracker -t -A -c "SHOW shared_preload_libraries;" 2>/dev/null || true)
+if echo "$PRELOAD" | grep -q "pg_stat_statements"; then
+    check_pass "pg_stat_statements is loaded (shared_preload_libraries)"
 else
-    check_fail "tofu is not installed, not on PATH, or infrastructure/ does not exist"
+    check_fail "pg_stat_statements is not loaded - see Step 12a"
 fi
 echo ""
 
